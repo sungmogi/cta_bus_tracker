@@ -1,18 +1,34 @@
 import os
 from configparser import ConfigParser
 import datatier
-import bcrypt
 import json
 
 def lambda_handler(event, context):
     try:
         print("**STARTING**")
-        print("**lambda: create_user**")
+        print("**lambda: view_pred**")
 
-        # Parse the username and password from the event
-        body = json.loads(event['body'])
-        username = body['username']
-        password = body['password']
+        if "headers" not in event:
+            msg = "no headers in request"
+            print("**ERROR:", msg)
+
+            return {
+                'statusCode': 400,
+                'body': json.dumps(msg)
+            }
+      
+        headers = event['headers']  
+    
+        if "Authentication" not in headers:
+            msg = "no security credentials"
+            print("**ERROR:", msg)
+        
+            return {
+                'statusCode': 401,
+                'body': json.dumps(msg)
+            }
+      
+        userid = headers["Authentication"]
 
         # Setup AWS based on config file
         config_file = 'bustracker-config.ini'
@@ -30,19 +46,20 @@ def lambda_handler(event, context):
 
         dbConn = datatier.get_dbConn(rds_endpoint, rds_portnum, rds_username, rds_pwd, rds_dbname)
 
-        # Hash the password
-        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-
         # SQL query to insert new user
         sql = '''
-            INSERT INTO users (username, pwdhash) VALUES (%s, %s);
+            SELECT route_number, stop_id FROM fav_routes WHERE user_id=%s;
         '''
 
-        datatier.perform_action(dbConn, sql, [username, hashed_password])
+        rows = datatier.retrieve_all_rows(dbConn, sql, [userid])
+
+        #print(rows)
+        fav_routes = [{'rt': row[0], 'stop': row[1] } for row in rows]
+        print(fav_routes)
 
         return {
             'statusCode': 200,
-            'body': json.dumps({"message": "User registered successfully"})
+            'body': json.dumps(fav_routes)
         }
 
     except Exception as err:

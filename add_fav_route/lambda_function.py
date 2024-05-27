@@ -1,18 +1,40 @@
 import os
 from configparser import ConfigParser
 import datatier
-import bcrypt
 import json
 
 def lambda_handler(event, context):
     try:
         print("**STARTING**")
-        print("**lambda: create_user**")
+        print("**lambda: add_fav_route**")
+
+        if "headers" not in event:
+            msg = "no headers in request"
+            print("**ERROR:", msg)
+
+            return {
+                'statusCode': 400,
+                'body': json.dumps(msg)
+            }
+      
+        headers = event['headers']  
+        print(headers)
+    
+        if "Authentication" not in headers:
+            msg = "no security credentials"
+            print("**ERROR:", msg)
+        
+            return {
+                'statusCode': 401,
+                'body': json.dumps(msg)
+            }
+      
+        userid = headers["Authentication"]
 
         # Parse the username and password from the event
         body = json.loads(event['body'])
-        username = body['username']
-        password = body['password']
+        rt = body['rt']
+        stop = body['stop']
 
         # Setup AWS based on config file
         config_file = 'bustracker-config.ini'
@@ -30,19 +52,16 @@ def lambda_handler(event, context):
 
         dbConn = datatier.get_dbConn(rds_endpoint, rds_portnum, rds_username, rds_pwd, rds_dbname)
 
-        # Hash the password
-        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-
         # SQL query to insert new user
         sql = '''
-            INSERT INTO users (username, pwdhash) VALUES (%s, %s);
+            INSERT INTO fav_routes (user_id, route_number, stop_id) VALUES (%s, %s, %s);
         '''
 
-        datatier.perform_action(dbConn, sql, [username, hashed_password])
+        datatier.perform_action(dbConn, sql, [userid, rt, stop])
 
         return {
             'statusCode': 200,
-            'body': json.dumps({"message": "User registered successfully"})
+            'body': json.dumps({"message": "Added favorite route successfully"})
         }
 
     except Exception as err:

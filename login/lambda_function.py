@@ -10,7 +10,7 @@ def lambda_handler(event, context):
         print("**lambda: login**")
 
         # username and password parsed from event
-        body = event['body']
+        body = json.loads(event['body'])
         username = body['username']
         password = body['password']
 
@@ -33,7 +33,7 @@ def lambda_handler(event, context):
         # get hashed password for this user
 
         sql = '''
-            SELECT pwdhash FROM users WHERE username=%s;
+            SELECT userid, username, pwdhash FROM users WHERE username=%s;
         '''
 
         row = datatier.retrieve_one_row(dbConn, sql, [username])
@@ -42,10 +42,11 @@ def lambda_handler(event, context):
             print("**No such user, returning...**")
             return { 'statusCode': 400, 'body': json.dumps("Invalid username or password") }
         
-        stored_hash = row[0]
+        userid, db_username, stored_hash = row
     
         if bcrypt.checkpw(password.encode('utf-8'), stored_hash.encode('utf-8')):
-            return { 'statusCode': 200, 'body': json.dumps({"message": "User logged in successfully"}) }
+            return { 'statusCode': 200, 'body': json.dumps({"userid": userid, "username": username}) }
+            
         else:
             return { 'statusCode': 400, 'body': json.dumps("Invalid username or password") }
 
