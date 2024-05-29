@@ -1,12 +1,8 @@
 import requests
-import jsons
 
-import uuid
 import pathlib
 import logging
 import sys
-import os
-import base64
 
 from configparser import ConfigParser
 
@@ -136,7 +132,7 @@ def login(baseurl):
 
   Returns
   -------
-  nothing
+  token
   """
 
   try:
@@ -169,11 +165,10 @@ def login(baseurl):
 
     body = res.json()
 
-    userid = body["userid"]
-    username = body["username"]
+    token = body['token']
 
     print(f"Welcome, {username}")
-    return userid
+    return token
 
   except Exception as e:
     logging.error("jobs() failed:")
@@ -319,7 +314,7 @@ def stops(baseurl):
     return
 
 
-def add_fav_route(baseurl, userid):
+def add_fav_route(baseurl, token):
   """
   Parameters
   ----------
@@ -331,7 +326,7 @@ def add_fav_route(baseurl, userid):
   nothing
   """
   try:
-    if userid is None:
+    if token is None:
       print("Please login")
       return
     
@@ -345,7 +340,7 @@ def add_fav_route(baseurl, userid):
     # make request:
     #
     
-    req_header = {"Authentication": str(userid)}
+    req_header = {"Authentication": token}
 
     print("Enter bus route>")
     route = input()
@@ -358,19 +353,17 @@ def add_fav_route(baseurl, userid):
     res = requests.post(url, headers=req_header, json=data)
 
     if res.status_code != 200:
-      # failed:
-      print("Failed with status code:", res.status_code)
-      print("url: " + url)
-      if res.status_code == 400:
-        # we'll have an error message
-        body = res.json()
-        print("Error message:", body)
-      return
-    
+        if res.status_code == 401:
+           print("Authentication failure. Please log in.")
+           return
+        print("Failed with status code:", res.status_code)
+        return
+
     body = res.json()
 
     print(body['message'])
     return
+    
 
   except Exception as e:
     logging.error("add_fav_route() failed:")
@@ -379,7 +372,7 @@ def add_fav_route(baseurl, userid):
     return
 
 
-def get_pred(baseurl, userid):
+def get_pred(baseurl, token):
   """
   Parameters
   ----------
@@ -391,7 +384,7 @@ def get_pred(baseurl, userid):
   nothing
   """
   try:
-    if userid is None:
+    if token is None:
       print("Please login")
       return
     
@@ -405,22 +398,18 @@ def get_pred(baseurl, userid):
     # make request:
     #
     
-    req_header = {"Authentication": str(userid)}
+    req_header = {"Authentication": token}
 
     res = requests.get(url, headers=req_header)
 
     if res.status_code != 200:
-      # failed:
-      print("Failed with status code:", res.status_code)
-      print("url: " + url)
-      if res.status_code == 400:
-        # we'll have an error message
-        body = res.json()
-        print("Error message:", body)
-      return
-    
-    body = res.json()
+        if res.status_code == 401:
+           print("Authentication failure. Please log in.")
+           return
+        print("Failed with status code:", res.status_code)
+        return
 
+    body = res.json()
     print("Enter number corresponding to desired route and stop>")
     for i, fav_route in enumerate(body):
         print(f"   {i+1} => Route {fav_route['rt']}, Stop {fav_route['stop']}")
@@ -525,15 +514,15 @@ try:
     if cmd == 1:
       register(baseurl)
     elif cmd == 2:
-      userid = login(baseurl)
+      token = login(baseurl)
     elif cmd == 3:
       routes(baseurl)
     elif cmd == 4:
       stops(baseurl)
     elif cmd == 5:
-      add_fav_route(baseurl, userid)
+      add_fav_route(baseurl, token)
     elif cmd == 6:
-      get_pred(baseurl, userid)
+      get_pred(baseurl, token)
     else:
       print("** Unknown command, try again...")
     #

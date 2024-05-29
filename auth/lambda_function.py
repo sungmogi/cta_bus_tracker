@@ -6,7 +6,11 @@ import requests
 def lambda_handler(event, context):
     try:
         print("**STARTING**")
-        print("**lambda: view_routes**")
+        print("**lambda: view_stops**")
+
+        body = json.loads(event['body'])
+        rt = body['rt']
+        dir = body['dir']
 
         # Setup AWS based on config file
         config_file = 'bustracker-config.ini'
@@ -19,19 +23,17 @@ def lambda_handler(event, context):
         api_key = configur.get('cta', 'api_key')
 
         response = requests.get(
-            "http://www.ctabustracker.com/bustime/api/v2/getroutes",
-            params={'key': api_key, 'format': 'json'}
+            "http://www.ctabustracker.com/bustime/api/v2/getstops",
+            params={'key': api_key, 'rt': rt, 'dir': dir, 'format': 'json'}
         )
 
-        routes = response.json()['bustime-response']['routes']
-        rts = {route['rt']: route['rtnm'] for route in routes}
-
-        res = {
-            'statusCode': 200,
-            'body': json.dumps(rts)
-        }
+        stops = response.json()['bustime-response']['stops']
+        parsed_stops = [{stop['stpid']: stop['stpnm']} for stop in stops]
         
-        return res
+        return {
+            'statusCode': 200,
+            'body': json.dumps(parsed_stops)
+        }
 
     except Exception as err:
         print("**ERROR**")

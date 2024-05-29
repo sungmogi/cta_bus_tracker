@@ -2,6 +2,7 @@ import os
 from configparser import ConfigParser
 import datatier
 import json
+import requests
 
 def lambda_handler(event, context):
     try:
@@ -18,7 +19,6 @@ def lambda_handler(event, context):
             }
       
         headers = event['headers']  
-        print(headers)
     
         if "Authentication" not in headers:
             msg = "no security credentials"
@@ -29,19 +29,34 @@ def lambda_handler(event, context):
                 'body': json.dumps(msg)
             }
       
-        userid = headers["Authentication"]
-
-        # Parse the username and password from the event
-        body = json.loads(event['body'])
-        rt = body['rt']
-        stop = body['stop']
-
+        token = headers["Authentication"]
+        
         # Setup AWS based on config file
         config_file = 'bustracker-config.ini'
         os.environ['AWS_SHARED_CREDENTIALS_FILE'] = config_file
 
         configur = ConfigParser()
         configur.read(config_file)
+
+        auth_url = configur.get('auth', 'webservice')
+        data = {"token": token}
+        api = '/auth'
+        url = auth_url + api
+        response = requests.post(url, json=data)
+        
+        if response.status_code != 200:
+            return {
+                'statusCode': 401,
+                'body': json.dumps("authentication failure")
+            }
+
+        data = response.json()
+        userid = data['userid']
+        
+        body = json.loads(event['body'])
+        rt = body['rt']
+        stop = body['stop']
+
 
         # Configure for RDS access
         rds_endpoint = configur.get('rds', 'endpoint')

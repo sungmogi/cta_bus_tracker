@@ -2,11 +2,12 @@ import os
 from configparser import ConfigParser
 import datatier
 import json
+import requests
 
 def lambda_handler(event, context):
     try:
         print("**STARTING**")
-        print("**lambda: view_pred**")
+        print("**lambda: view_fav_routes**")
 
         if "headers" not in event:
             msg = "no headers in request"
@@ -28,7 +29,7 @@ def lambda_handler(event, context):
                 'body': json.dumps(msg)
             }
       
-        userid = headers["Authentication"]
+        token = headers["Authentication"]
 
         # Setup AWS based on config file
         config_file = 'bustracker-config.ini'
@@ -36,6 +37,21 @@ def lambda_handler(event, context):
 
         configur = ConfigParser()
         configur.read(config_file)
+
+        auth_url = configur.get('auth', 'webservice')
+        data = {"token": token}
+        api = '/auth'
+        url = auth_url + api
+        response = requests.post(url, json=data)
+        
+        if response.status_code != 200:
+            return {
+                'statusCode': 401,
+                'body': json.dumps({"error": "token expired"})
+            }
+
+        data = response.json()
+        userid = data['userid']
 
         # Configure for RDS access
         rds_endpoint = configur.get('rds', 'endpoint')
@@ -53,7 +69,6 @@ def lambda_handler(event, context):
 
         rows = datatier.retrieve_all_rows(dbConn, sql, [userid])
 
-        #print(rows)
         fav_routes = [{'rt': row[0], 'stop': row[1] } for row in rows]
         print(fav_routes)
 

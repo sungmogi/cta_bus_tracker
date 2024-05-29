@@ -3,6 +3,8 @@ from configparser import ConfigParser
 import datatier
 import bcrypt
 import json
+import jwt
+import datetime
 
 def lambda_handler(event, context):
     try:
@@ -30,8 +32,6 @@ def lambda_handler(event, context):
 
         dbConn = datatier.get_dbConn(rds_endpoint, rds_portnum, rds_username, rds_pwd, rds_dbname)
 
-        # get hashed password for this user
-
         sql = '''
             SELECT userid, username, pwdhash FROM users WHERE username=%s;
         '''
@@ -45,7 +45,12 @@ def lambda_handler(event, context):
         userid, db_username, stored_hash = row
     
         if bcrypt.checkpw(password.encode('utf-8'), stored_hash.encode('utf-8')):
-            return { 'statusCode': 200, 'body': json.dumps({"userid": userid, "username": username}) }
+            secret_key = configur.get('jwt', 'secret_key')
+            exp_time = datetime.datetime.now(datetime.UTC) + datetime.timedelta(minutes=2)
+            payload = {"userid": userid, "username": db_username, "exp": exp_time}
+            token = jwt.encode(payload, secret_key, algorithm='HS256')
+
+            return { 'statusCode': 200, 'body': json.dumps({"token": token})}
             
         else:
             return { 'statusCode': 400, 'body': json.dumps("Invalid username or password") }
