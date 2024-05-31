@@ -5,6 +5,7 @@ import logging
 import sys
 
 from configparser import ConfigParser
+from getpass import getpass
 
 
 ############################################################
@@ -64,7 +65,7 @@ def prompt():
 def register(baseurl):
   """
   call create_user
-  
+
   Parameters
   ----------
   baseurl: baseurl for web service
@@ -85,7 +86,7 @@ def register(baseurl):
     username = input()
 
     print("Enter password>")
-    password = input()
+    password = getpass()
 
     data = {"username": username, "password": password}
 
@@ -146,7 +147,7 @@ def login(baseurl):
     username = input()
 
     print("Enter password>")
-    password = input()
+    password = getpass()
 
     data = {"username": username, "password": password}
 
@@ -223,7 +224,7 @@ def routes(baseurl):
     body = res.json()
 
     for route, name in body.items():
-        print(f"Route {route}: {name}")
+      print(f"Route {route}: {name}")
     return
 
   except Exception as e:
@@ -267,18 +268,18 @@ def stops(baseurl):
     print("   4 => Northbound")
 
     index = int(input())
-    
+
     if index == 1:
-        direction = 'Eastbound'
+      direction = 'Eastbound'
     elif index == 2:
-        direction = 'Westbound'
+      direction = 'Westbound'
     elif index == 3:
-        direction = 'Southbound'
+      direction = 'Southbound'
     elif index == 4:
-        direction = 'Northbound'
+      direction = 'Northbound'
     else:
-        print("Invalid direction...")
-        return
+      print("Invalid direction...")
+      return
 
     data = {"rt": route, "dir": direction}
 
@@ -303,8 +304,8 @@ def stops(baseurl):
     body = res.json()
 
     for stop in body:
-        for key, value in stop.items():
-            print(f"Stop {key}: {value}")
+      for key, value in stop.items():
+        print(f"Stop {key}: {value}")
     return
 
   except Exception as e:
@@ -329,7 +330,7 @@ def add_fav_route(baseurl, token):
     if token is None:
       print("Please login")
       return
-    
+
     #
     # call the web service:
     #
@@ -339,7 +340,7 @@ def add_fav_route(baseurl, token):
     #
     # make request:
     #
-    
+
     req_header = {"Authentication": token}
 
     print("Enter bus route>")
@@ -353,17 +354,16 @@ def add_fav_route(baseurl, token):
     res = requests.post(url, headers=req_header, json=data)
 
     if res.status_code != 200:
-        if res.status_code == 401:
-           print("Authentication failure. Please log in.")
-           return
-        print("Failed with status code:", res.status_code)
+      if res.status_code == 401:
+        print("Authentication failure. Please log in.")
         return
+      print("Failed with status code:", res.status_code)
+      return
 
     body = res.json()
 
     print(body['message'])
     return
-    
 
   except Exception as e:
     logging.error("add_fav_route() failed:")
@@ -387,7 +387,7 @@ def get_pred(baseurl, token):
     if token is None:
       print("Please login")
       return
-    
+
     #
     # call the web service:
     #
@@ -397,25 +397,29 @@ def get_pred(baseurl, token):
     #
     # make request:
     #
-    
+
     req_header = {"Authentication": token}
 
     res = requests.get(url, headers=req_header)
 
     if res.status_code != 200:
-        if res.status_code == 401:
-           print("Authentication failure. Please log in.")
-           return
-        print("Failed with status code:", res.status_code)
+      if res.status_code == 401:
+        print("Authentication failure. Please log in.")
         return
+      print("Failed with status code:", res.status_code)
+      return
 
     body = res.json()
+    if len(body) == 0:
+      print("Please add a favorite route first")
+      return
+
     print("Enter number corresponding to desired route and stop>")
     for i, fav_route in enumerate(body):
-        print(f"   {i+1} => Route {fav_route['rt']}, Stop {fav_route['stop']}")
+      print(f"   {i+1} => Route {fav_route['rt']}, Stop {fav_route['stop']}")
 
     index = int(input())
-    rt_stop = body[index-1]
+    rt_stop = body[index - 1]
 
     print(f"Fetching ETA for Route {rt_stop['rt']}, Stop {rt_stop['stop']}")
 
@@ -431,14 +435,15 @@ def get_pred(baseurl, token):
     body = res.json()
 
     if 'error' in body:
-        print(body['error'])
-        return
-    
+      print(body['error'])
+      return
+
     for eta in body:
-        if int(eta['time_diff']) <= 0:
-            print(f"Vehicle {eta['vid']} will arrive soon")
-        else:
-            print(f"Vehicle {eta['vid']} will arrive in {eta['time_diff']} minutes")
+      if int(eta['time_diff']) <= 0:
+        print(f"Vehicle {eta['vid']} will arrive soon")
+      else:
+        print(
+            f"Vehicle {eta['vid']} will arrive in {eta['time_diff']} minutes")
 
     return
 
