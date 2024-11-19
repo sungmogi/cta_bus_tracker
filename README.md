@@ -1,5 +1,7 @@
 # cta_bus_tracker
 
+[Click here for a video demo.](https://www.youtube.com/watch?v=0LQxLluKjLg)
+
 ## Architecture and Design
 The web service is built using AWS Lambda functions, API Gateway, and an RDS (Relational Database Service) for data storage. Lambda functions handle the core logic for each feature. API Gateway triggers the Lambda functions via HTTP endpoints. Lastly, client side is used for users to interact with the server side using python. 
 
